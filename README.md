@@ -1,7 +1,7 @@
 # PerformanceTuning
 
 Unityにおけるパフォーマンス最適化の実装例を示すプロジェクトです。
-3つの異なる最適化レベル（Level0、Level1、Level2）を通じて、段階的な最適化手法を学ぶことができます。
+4つの異なる最適化レベル（Level0〜Level3）を通じて、段階的な最適化手法を学ぶことができます。
 
 ## 目次
 
@@ -39,11 +39,12 @@ Unityにおけるパフォーマンス最適化の実装例を示すプロジェ
 
 ## プロジェクト概要
 
-このプロジェクトは、大量のオブジェクト（最大100万個）を効率的に処理するための3段階の最適化アプローチを実装しています：
+このプロジェクトは、大量のオブジェクト（最大100万個）を効率的に処理するための4段階の最適化アプローチを実装しています：
 
 1. **Level0**: 基本的な実装（GameObject + Object Pooling）
 2. **Level1**: Jobs Systemを使用した最適化
-3. **Level2**: GPU Instancingを使用した最高レベルの最適化
+3. **Level2**: GPU Instancingを使用した最適化（DrawMeshInstanced）
+4. **Level3**: Procedural GPU Instancingを使用した最高レベルの最適化（DrawMeshInstancedProcedural）
 
 プレイヤーは画面内を移動でき、アイテムはプレイヤーに引き寄せられるインタラクティブな動作を実装しています。
 
@@ -65,47 +66,37 @@ cd PerformanceTuning
 
 ### 3. シーンの実行
 
-プロジェクトには3つのシーンが含まれています：
+プロジェクトには4つのシーンが含まれています：
 
-#### Level0シーンの実行
+| シーン | パス |
+|-------|------|
+| Level0 | `Assets/Scenes/Level0.unity` |
+| Level1 | `Assets/Scenes/Level1.unity` |
+| Level2 | `Assets/Scenes/Level2.unity` |
+| Level3 | `Assets/Scenes/Level3.unity` |
 
-```
-Assets/Scenes/Level0.unity
-```
-
-1. Project ウィンドウで `Assets/Scenes/Level0.unity` をダブルクリック
+1. Project ウィンドウで対象のシーンをダブルクリック
 2. Unity Editor上部の ▶️ ボタンを押して実行
-3. WASDキーまたは矢印キーでプレイヤーを移動
-
-#### Level1シーンの実行
-
-```
-Assets/Scenes/Level1.unity
-```
-
-1. Project ウィンドウで `Assets/Scenes/Level1.unity` をダブルクリック
-2. Unity Editor上部の ▶️ ボタンを押して実行
-3. WASDキーまたは矢印キーでプレイヤーを移動
-
-#### Level2シーンの実行
-
-```
-Assets/Scenes/Level2.unity
-```
-
-1. Project ウィンドウで `Assets/Scenes/Level2.unity` をダブルクリック
-2. Unity Editor上部の ▶️ ボタンを押して実行
-3. WASDキーまたは矢印キーでプレイヤーを移動
 
 ### 4. ビルド方法
 
 #### スタンドアロンビルド
 
 1. `File` → `Build Settings` を選択
-2. 実行したいシーン（Level0、Level1、またはLevel2）を `Scenes In Build` に追加
+2. 実行したいシーンを `Scenes In Build` に追加
 3. `Platform` を選択（Windows, Mac, Linux）
 4. `Build` または `Build And Run` をクリック
 5. ビルド先のフォルダを指定
+
+## 操作方法
+
+| 操作 | キー |
+|------|------|
+| プレイヤー移動 | WASD または 矢印キー |
+| アイテムスポーン | スペースキー（押している間スポーン） |
+| 10倍スポーン | Shift + スペースキー |
+| 100倍スポーン | Ctrl + スペースキー（Windows）/ Cmd + スペースキー（macOS） |
+| 終了 | Unity Editorの停止ボタン、またはEscキー（ビルド版） |
 
 ## 各レベルの説明
 
@@ -149,11 +140,35 @@ Assets/Scenes/Level2.unity
 - バッチ処理（1023個ずつ）によるドローコール削減
 - マテリアルプロパティブロックによる効率的な描画
 
-**パフォーマンス**: 最高速（Level0の10倍以上）
+**パフォーマンス**: Level0の10倍以上高速
 
 **主要コンポーネント**:
 - `ItemUpdateJob`: float4x4行列をJobで並列計算
 - 描画はGameObjectではなくマトリクス配列で管理
+
+### Level3: Procedural GPU Instancing最適化
+
+**場所**: `Assets/Scripts/Level3/`
+
+**特徴**:
+- Graphics.DrawMeshInstancedProceduralによるProcedural描画
+- StructuredBufferを使用したGPUへの直接データ転送
+- カスタムシェーダーによるワールド座標変換（位置・回転・スケール）
+- GraphicsBufferによるGC Allocなしのデータ転送
+- バッチ制限（1023個）なしの一括描画
+
+**パフォーマンス**: 最高速（Level2をさらに上回る）
+
+**主要コンポーネント**:
+- `ItemUpdateJob`: 位置・回転・スケール・UV座標をJobで並列計算
+- `InstancedSpriteV2.shader`: クォータニオン回転をサポートするカスタムシェーダー
+- GraphicsBuffer: NativeArrayからGPUへの高速データ転送
+
+**シェーダーの特徴**:
+- `StructuredBuffer`でインスタンスごとのデータを受け取り
+- `SV_InstanceID`でインスタンスを識別
+- クォータニオンによる回転計算をGPU側で実行
+- `UNITY_MATRIX_VP`のみを使用したワールド→クリップ座標変換
 
 ## パフォーマンス最適化の手法
 
@@ -175,18 +190,22 @@ Assets/Scenes/Level2.unity
 - 同一メッシュの大量描画を1回のドローコールで実現
 - GPU側での効率的な処理
 
-### 5. NativeContainers
+### 5. Procedural GPU Instancing
+- バッチ制限なしの大量描画
+- StructuredBufferによる柔軟なデータ転送
+- カスタムシェーダーによる完全なGPU側処理
+
+### 6. NativeContainers
 - マネージドヒープを使用しないメモリ管理
 - GC圧力の削減
 
-### 6. スプライトアトラス
+### 7. GraphicsBuffer
+- NativeArrayからGPUへの直接転送
+- GC Allocなしのデータ転送
+
+### 8. スプライトアトラス
 - テクスチャの結合によりドローコール削減
 - UV座標の動的変更によるアニメーション
-
-## 操作方法
-
-- **移動**: WASDキー または 矢印キー
-- **終了**: Unity Editorの停止ボタン、またはEscキー（ビルド版）
 
 ## パフォーマンス測定
 
@@ -213,3 +232,5 @@ Unity Profilerを使用することで、より詳細なパフォーマンス情
 - [Unity Jobs System](https://docs.unity3d.com/Manual/JobSystem.html)
 - [Burst Compiler](https://docs.unity3d.com/Packages/com.unity.burst@latest)
 - [GPU Instancing](https://docs.unity3d.com/Manual/GPUInstancing.html)
+- [Graphics.DrawMeshInstancedProcedural](https://docs.unity3d.com/ScriptReference/Graphics.DrawMeshInstancedProcedural.html)
+- [StructuredBuffer](https://docs.unity3d.com/Manual/class-ComputeShader.html)
