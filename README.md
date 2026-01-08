@@ -122,12 +122,20 @@ cd PerformanceTuning
 - NativeArrayによる効率的なメモリ管理
 - Burst Compilerによるコード最適化
 - スプライトアトラスによるアニメーション最適化
+- Z値による描画順序制御（後からスポーンしたアイテムが前面に表示）
+- ZWrite有効化 + アルファテストによるZ-fighting対策
 
 **パフォーマンス**: Level0の数倍高速
 
 **主要コンポーネント**:
 - `ItemUpdateJob`: アイテムの位置計算とアニメーションをJobで並列処理
 - `ItemData`: Burstコンパイル可能な構造体でアイテムデータを管理
+- `TunedDefaultSprite.shader`: Z-fighting対策済みのカスタムシェーダー
+
+**シェーダーの特徴**:
+- `Queue="Transparent"` + `ZWrite On` で深度バッファへの書き込みを有効化
+- `clip()` による透明部分のカット（アルファテスト）
+- 生成順に基づくZ値と深度テストで安定した描画順序を実現
 
 ### Level2: GPU Instancing最適化
 
