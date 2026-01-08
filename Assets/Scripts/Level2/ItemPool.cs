@@ -3,6 +3,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using Xeon.Performance.Common;
 using Random = UnityEngine.Random;
 
@@ -34,7 +35,7 @@ namespace Xeon.Performance.Level2
         private static readonly int SpriteRectId = Shader.PropertyToID("_SpriteRect");
 
         private float elapsed = 0f;
-        private const float SpawnInterval = 0.5f;
+        private const float SpawnInterval = 0.2f;
         private const int SpawnCountPerInterval = 100;
 
         private int activeCount = 0;
@@ -102,14 +103,27 @@ namespace Xeon.Performance.Level2
             activeItemCountLabel.text = $"{activeCount}/{MaxCapacity}";
 
             // スポーン処理
-            elapsed += Time.deltaTime;
-            if (elapsed >= SpawnInterval)
+            if (elapsed > 0f)
             {
-                elapsed = 0f;
-                for (int count = 0; count < SpawnCountPerInterval; count++)
+                elapsed -= Time.deltaTime;
+                return;
+            }
+            if (Keyboard.current.spaceKey.isPressed)
+            {
+                var spawnCount = SpawnCountPerInterval;
+                if (Keyboard.current.leftShiftKey.isPressed)
+                {
+                    spawnCount *= 10;
+                }
+                else if (Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.leftCommandKey.isPressed)
+                {
+                    spawnCount *= 100;
+                }
+                for (int count = 0; count < spawnCount; count++)
                 {
                     SpawnItem();
                 }
+                elapsed += SpawnInterval;
             }
         }
 

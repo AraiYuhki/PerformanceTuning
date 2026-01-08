@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using TMPro;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Jobs;
 using UnityEngine.Pool;
 using Xeon.Performance.Common;
@@ -30,7 +31,7 @@ namespace Xeon.Performance.Level1
         private List<Item> activeItems = new();
 
         private float elapsed = 0f;
-        private const float SpawnInterval = 0.5f;
+        private const float SpawnInterval = 0.2f;
         private const int SpawnCountPerInterval = 100;
 
         private void Start()
@@ -80,13 +81,28 @@ namespace Xeon.Performance.Level1
             }
 
             activeItemCountLabel.text = $"{activeItems.Count}/{MaxCapacity}";
-            elapsed += Time.deltaTime;
-            if (elapsed < SpawnInterval)
-                return;
-            elapsed = 0f;
-            for (var count = 0; count < SpawnCountPerInterval; count++)
+
+            if (elapsed > 0f)
             {
-                itemPool.Get();
+                elapsed -= Time.deltaTime;
+                return;
+            }
+            if (Keyboard.current.spaceKey.isPressed)
+            {
+                var spawnCount = SpawnCountPerInterval;
+                if (Keyboard.current.leftShiftKey.isPressed)
+                {
+                    spawnCount *= 10;
+                }
+                else if (Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.leftCommandKey.isPressed)
+                {
+                    spawnCount *= 100;
+                }
+                for (var count = 0; count < spawnCount; count++)
+                {
+                    itemPool.Get();
+                }
+                elapsed += SpawnInterval;
             }
         }
 

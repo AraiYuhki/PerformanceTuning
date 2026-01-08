@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Pool;
 using Random = UnityEngine.Random;
 
@@ -20,7 +21,7 @@ namespace Xeon.Performance.Level0
         private List<Item>[] activeItems;
 
         private float elapsed = 0f;
-        private const float SpawnInterval = 0.5f;
+        private const float SpawnInterval = 0.2f;
         private const int SpawnCountPerInterval = 100;
 
         private bool isInitialized = false;
@@ -52,21 +53,36 @@ namespace Xeon.Performance.Level0
                 return;
             var itemCount = activeItems.Sum(items => items.Count);
             activeItemCountLabel.text = $"{itemCount}/{MaxCapacity}";
-            elapsed += Time.deltaTime;
-            if (elapsed < SpawnInterval)
-                return;
-            elapsed = 0f;
-            for (var count = 0; count < SpawnCountPerInterval; count++)
+
+            if (elapsed > 0f)
             {
-                var index = Random.Range(0, itemPrefabs.Length);
-                try
+                elapsed -= Time.deltaTime;
+                return;
+            }
+            if (Keyboard.current.spaceKey.isPressed)
+            {
+                var spawnCount = SpawnCountPerInterval;
+                if (Keyboard.current.leftShiftKey.isPressed)
                 {
-                    itemPools[index].Get();
+                    spawnCount *= 10;
                 }
-                catch (Exception e)
+                else if (Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.leftCommandKey.isPressed)
                 {
-                    Debug.LogException(e);
+                    spawnCount *= 100;
                 }
+                for (var count = 0; count < spawnCount; count++)
+                {
+                    var index = Random.Range(0, itemPrefabs.Length);
+                    try
+                    {
+                        itemPools[index].Get();
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                    }
+                }
+                elapsed += SpawnInterval;
             }
         }
 
