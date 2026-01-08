@@ -38,6 +38,7 @@ namespace Xeon.Performance.Level1
             }
 
             // 移動処理
+            var currentPosition = transform.position;
             if (itemData.IsPulling)
             {
                 itemData.Elapsed += deltaTime;
@@ -54,9 +55,9 @@ namespace Xeon.Performance.Level1
             }
             else
             {
-                if (Vector3.Distance(playerPosition, itemData.Position) < CollisionDistance)
+                if (Vector3.Distance(playerPosition, currentPosition) < CollisionDistance)
                 {
-                    itemData.StartPosition = itemData.Position;
+                    itemData.StartPosition = currentPosition;
                     itemData.IsPulling = true;
                 }
             }

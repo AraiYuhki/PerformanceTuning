@@ -99,8 +99,8 @@ namespace Xeon.Performance.Level1
                     spawnCount *= 100;
                 }
                 for (var count = 0; count < spawnCount; count++)
-                {
-                    itemPool.Get();
+            {
+                itemPool.Get();
                 }
                 elapsed += SpawnInterval;
             }
@@ -122,7 +122,7 @@ namespace Xeon.Performance.Level1
             var maxBounds = Camera.main.ViewportToWorldPoint(new Vector3(1, 1, 0));
             var randomX = Random.Range(minBounds.x, maxBounds.x);
             var randomY = Random.Range(minBounds.y, maxBounds.y);
-            target.transform.position = new Vector3(randomX, randomY, 0f);
+            target.transform.position = new Vector3(randomX, randomY, -target.Id * 0.0001f);
             target.IsReleased = false;
             target.gameObject.SetActive(true);
             activeItems.Add(target);
